@@ -1,0 +1,230 @@
+/* ===== 全局样式重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC',
+    'Microsoft YaHei', 'Source Han Sans SC', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #333;
+  background: linear-gradient(180deg, #e8f5e9 0%, #e3f2fd 50%, #f5f5f5 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 安全区域适配 (iPhone X+) */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 禁止文字选择（更像原生 App） */
+.app-container {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 允许输入框选择 */
+input, textarea {
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+
+/* ===== 清爽活力主题 ===== */
+:root {
+  /* 主色调 - 活力蓝绿 */
+  --van-primary-color: #26a69a;
+  --van-button-primary-background: linear-gradient(135deg, #26a69a 0%, #4db6ac 100%);
+  --van-button-primary-border-color: #26a69a;
+  
+  /* 辅助色 */
+  --theme-primary: #26a69a;
+  --theme-primary-light: #b2dfdb;
+  --theme-secondary: #42a5f5;
+  --theme-secondary-light: #bbdefb;
+  --theme-accent: #ffb74d;
+  --theme-accent-light: #ffe0b2;
+  --theme-success: #66bb6a;
+  --theme-success-light: #c8e6c9;
+  --theme-warning: #ffa726;
+  --theme-warning-light: #ffe0b2;
+  --theme-danger: #ef5350;
+  --theme-danger-light: #ffcdd2;
+  
+  /* 阴影 */
+  --theme-shadow: 0 4px 20px rgba(38, 166, 154, 0.15);
+  --theme-shadow-hover: 0 6px 24px rgba(38, 166, 154, 0.25);
+  
+  /* Vant 覆盖 */
+  --van-nav-bar-icon-color: #666;
+  --van-nav-bar-text-color: #666;
+  --van-nav-bar-title-font-size: 17px;
+}
+
+/* 导航栏 - 清爽风格 */
+.van-nav-bar {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: none !important;
+  box-shadow: 0 2px 12px rgba(38, 166, 154, 0.08) !important;
+}
+
+/* 统一过渡动画 */
+.van-cell-group--inset {
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: var(--cute-shadow) !important;
+}
+
+/* 按钮圆角 - 更圆润 */
+.van-button--round {
+  border-radius: 28px !important;
+}
+
+/* 按钮主色渐变 */
+.van-button--primary {
+  background: linear-gradient(135deg, #26a69a 0%, #4db6ac 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(38, 166, 154, 0.35);
+}
+
+.van-button--primary:active {
+  transform: scale(0.96);
+}
+
+/* 危险按钮 */
+.van-button--danger {
+  background: linear-gradient(135deg, #ef5350 0%, #e57373 100%) !important;
+  border: none !important;
+}
+
+/* 警告按钮 */
+.van-button--warning {
+  background: linear-gradient(135deg, #ffa726 0%, #ffb74d 100%) !important;
+  border: none !important;
+}
+
+/* 成功按钮 */
+.van-button--success {
+  background: linear-gradient(135deg, #66bb6a 0%, #81c784 100%) !important;
+  border: none !important;
+}
+
+/* iOS 状态栏留白 */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .van-nav-bar {
+    padding-top: env(safe-area-inset-top) !important;
+  }
+}
+
+/* ===== 装饰元素 ===== */
+.app-mascot {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+
+.app-mascot-small {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.app-mascot-large {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+}
+
+/* 浮动动画 */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 弹跳动画 */
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.bounce-animation {
+  animation: bounce 2s ease-in-out infinite;
+}
+
+/* 闪烁动画 */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.twinkle-animation {
+  animation: twinkle 1.5s ease-in-out infinite;
+}
+
+/* 现代卡片样式 */
+.modern-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--theme-shadow);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.modern-card:active {
+  transform: scale(0.98);
+  box-shadow: var(--theme-shadow-hover);
+}
+
+/* 标签样式 */
+.app-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-tag-primary {
+  background: var(--theme-primary-light);
+  color: var(--theme-primary);
+}
+
+.app-tag-blue {
+  background: var(--theme-secondary-light);
+  color: var(--theme-secondary);
+}
+
+.app-tag-green {
+  background: var(--theme-success-light);
+  color: var(--theme-success);
+}
+
+.app-tag-orange {
+  background: var(--theme-accent-light);
+  color: #f57c00;
+}
+
+.app-tag-red {
+  background: var(--theme-danger-light);
+  color: var(--theme-danger);
+}
