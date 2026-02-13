@@ -1,11 +1,15 @@
 import { createWorker } from 'tesseract.js'
 import { ref } from 'vue'
+import { isConfigured, recognizeWordsViaLLM, recognizeHandwritingViaLLM } from './llm'
 
 let workerMixed = null   // 中英文混合
 let workerEng = null     // 纯英文
 
 export const ocrProgress = ref(0)
 export const ocrLoading = ref(false)
+
+// 当前使用的识别引擎：'llm' 或 'tesseract'
+export const ocrEngine = ref(isConfigured() ? 'llm' : 'tesseract')
 
 /**
  * 获取混合模型 worker
@@ -139,13 +143,24 @@ function isMainlyEnglish(words) {
 
 /**
  * 识别词语（录入用，识别课本印刷体）
+ * 优先使用大模型 API，未配置时回退 Tesseract.js
  */
 export async function recognizeWords(image) {
   ocrLoading.value = true
   ocrProgress.value = 0
 
   try {
-    // 1. 先做图片预处理，提高印刷体识别率
+    // 优先使用大模型
+    if (isConfigured()) {
+      ocrEngine.value = 'llm'
+      ocrProgress.value = 20
+      const result = await recognizeWordsViaLLM(image)
+      ocrProgress.value = 100
+      return result
+    }
+
+    // 回退 Tesseract.js
+    ocrEngine.value = 'tesseract'
     ocrProgress.value = 5
     const processed = await preprocessImage(image)
     const imgToRecognize = processed || image
@@ -156,25 +171,20 @@ export async function recognizeWords(image) {
     const text = data.text.trim()
     if (!text) return []
 
-    // 2. 智能分词处理
     const words = text
-      .split(/[\n\r]+/)  // 先按行分
+      .split(/[\n\r]+/)
       .flatMap(line => {
-        // 去掉行首的序号（如 "10"、"11"、"13" 等）
         const cleanLine = line
-          .replace(/^\s*\d+\s+/, '')  // 行首数字序号
-          .replace(/^\s*\d+[.、)）:：]\s*/, '')  // 带标点的序号
-          .replace(/^\s*[一二三四五六七八九十]+[.、)）:：]\s*/, '')  // 中文序号
+          .replace(/^\s*\d+\s+/, '')
+          .replace(/^\s*\d+[.、)）:：]\s*/, '')
+          .replace(/^\s*[一二三四五六七八九十]+[.、)）:：]\s*/, '')
           .trim()
-        
-        // 按空格、逗号、顿号等分割
         return cleanLine.split(/[\s,，、；;]+/)
       })
       .map(w => w.trim())
       .filter(w => w.length > 0)
-      .filter(w => isValidWord(w))  // 使用新的验证函数
+      .filter(w => isValidWord(w))
 
-    // 3. 去重
     return [...new Set(words)]
   } finally {
     ocrLoading.value = false
@@ -223,7 +233,7 @@ function isValidWord(text) {
 
 /**
  * 识别手写内容（批改用）
- * 增加图片预处理 + 根据原始词语语言选择最佳模型
+ * 优先使用大模型 API，未配置时回退 Tesseract.js
  * @param {File|Blob|string} image
  * @param {string[]} originalWords - 原始词语列表，用于判断语言
  */
@@ -232,22 +242,29 @@ export async function recognizeHandwriting(image, originalWords = []) {
   ocrProgress.value = 0
 
   try {
-    // 1. 图片预处理（灰度→对比度→二值化）
+    // 优先使用大模型
+    if (isConfigured()) {
+      ocrEngine.value = 'llm'
+      ocrProgress.value = 20
+      const result = await recognizeHandwritingViaLLM(image, originalWords)
+      ocrProgress.value = 100
+      return result
+    }
+
+    // 回退 Tesseract.js
+    ocrEngine.value = 'tesseract'
     ocrProgress.value = 5
     const processed = await preprocessImage(image)
     const imgToRecognize = processed || image
 
-    // 2. 根据原始词语判断语言，选择最佳 worker
     const useEng = isMainlyEnglish(originalWords)
     const w = useEng ? await getEngWorker() : await getMixedWorker()
 
-    // 3. OCR 识别
     const { data } = await w.recognize(imgToRecognize)
 
     const text = data.text.trim()
     if (!text) return []
 
-    // 4. 按行分割（手写内容通常一行一个词）
     const words = text
       .split(/[\n\r]+/)
       .map(line => line.trim())

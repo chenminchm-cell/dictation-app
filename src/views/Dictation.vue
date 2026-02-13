@@ -343,15 +343,28 @@ function onEnVoiceSelect(action) {
   showEnVoicePicker.value = false
 }
 
+// 读取全局默认听写参数
+function loadDefaults() {
+  try {
+    const saved = localStorage.getItem('dictation_defaults')
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return { speed: 80, repeats: 2, interval: 5 }
+}
+
 onMounted(async () => {
   loadVoices()
+  const globalDefaults = loadDefaults()
 
   const id = Number(route.params.id)
   task.value = await getTask(id)
   if (task.value) {
-    speed.value = Math.round((task.value.speed || 0.8) * 100)
-    repeats.value = task.value.repeats || 2
-    intervalSec.value = task.value.intervalSeconds || 5
+    // 优先用任务自身参数，其次全局默认
+    speed.value = task.value.speed
+      ? Math.round(task.value.speed * 100)
+      : globalDefaults.speed
+    repeats.value = task.value.repeats || globalDefaults.repeats
+    intervalSec.value = task.value.intervalSeconds || globalDefaults.interval
   }
 })
 

@@ -57,38 +57,6 @@
         </div>
       </div>
 
-      <!-- 听写设置 -->
-      <div class="section-title">听写设置</div>
-      <van-cell-group inset class="form-group">
-        <van-cell title="语速">
-          <template #value>
-            <div class="slider-cell">
-              <span class="slider-label">慢</span>
-              <van-slider
-                v-model="speed"
-                :min="30"
-                :max="150"
-                :step="10"
-                class="speed-slider"
-              />
-              <span class="slider-label">快</span>
-              <span class="slider-value">{{ (speed / 100).toFixed(1) }}</span>
-            </div>
-          </template>
-        </van-cell>
-        <van-cell title="每词遍数">
-          <template #value>
-            <van-stepper v-model="repeats" :min="1" :max="5" />
-          </template>
-        </van-cell>
-        <van-cell title="间隔时间">
-          <template #value>
-            <van-stepper v-model="interval" :min="2" :max="30" />
-            <span class="unit-text">秒</span>
-          </template>
-        </van-cell>
-      </van-cell-group>
-
       <!-- 保存按钮 -->
       <div class="save-container">
         <van-button
@@ -230,11 +198,33 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { addTask, updateTask, getTask } from '../db'
 import { recognizeWords, ocrProgress } from '../services/ocr'
+
+// 检测词语列表主要是中文还是英文
+function detectLanguage(wordList) {
+  if (!wordList || wordList.length === 0) return 'unknown'
+  const chineseCount = wordList.filter(w => /[\u4e00-\u9fa5]/.test(w)).length
+  const englishCount = wordList.filter(w => /^[a-zA-Z\s'-]+$/.test(w.trim())).length
+  if (chineseCount > englishCount) return 'chinese'
+  if (englishCount > chineseCount) return 'english'
+  return 'mixed'
+}
+
+// 生成默认标题
+function generateDefaultTitle(wordList) {
+  const lang = detectLanguage(wordList)
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const day = now.getDate()
+  const dateStr = `${month}月${day}日`
+  if (lang === 'english') return `英语听写 ${dateStr}`
+  if (lang === 'chinese') return `语文听写 ${dateStr}`
+  return `听写 ${dateStr}`
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -245,9 +235,19 @@ const taskId = computed(() => route.params.id ? Number(route.params.id) : null)
 // 表单数据
 const title = ref('')
 const words = ref([])
-const speed = ref(80)    // 80 = 0.8x
-const repeats = ref(2)
-const interval = ref(5)
+
+// 听写参数从设置页面读取默认值
+function loadDefaults() {
+  try {
+    const saved = localStorage.getItem('dictation_defaults')
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return { speed: 80, repeats: 2, interval: 5 }
+}
+const defaults = loadDefaults()
+const speed = ref(defaults.speed || 80)
+const repeats = ref(defaults.repeats || 2)
+const interval = ref(defaults.interval || 5)
 
 // UI 状态
 const showManualInput = ref(false)
@@ -277,6 +277,26 @@ const cameraActions = [
 
 const canSave = computed(() => {
   return title.value.trim() && words.value.length > 0
+})
+
+// 是否由用户手动修改过标题
+const titleManuallyEdited = ref(false)
+let lastAutoTitle = ''
+
+// 监听词语列表变化，自动生成默认标题
+watch(() => words.value.length, () => {
+  if (!isEdit.value && !titleManuallyEdited.value && words.value.length > 0) {
+    const autoTitle = generateDefaultTitle(words.value)
+    lastAutoTitle = autoTitle
+    title.value = autoTitle
+  }
+})
+
+// 监听标题手动修改
+watch(title, (newVal) => {
+  if (newVal !== lastAutoTitle && newVal !== '') {
+    titleManuallyEdited.value = true
+  }
 })
 
 // 编辑模式：加载已有任务
@@ -563,41 +583,6 @@ async function saveTask() {
 
 .word-remove:active {
   color: var(--theme-danger);
-}
-
-.slider-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.slider-label {
-  font-size: 12px;
-  color: #999;
-  flex-shrink: 0;
-}
-
-.speed-slider {
-  flex: 1;
-}
-
-:deep(.van-slider__bar) {
-  background: linear-gradient(90deg, #26a69a, #4db6ac) !important;
-}
-
-.slider-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--theme-primary);
-  min-width: 28px;
-  text-align: right;
-}
-
-.unit-text {
-  font-size: 14px;
-  color: #666;
-  margin-left: 4px;
 }
 
 .save-container {

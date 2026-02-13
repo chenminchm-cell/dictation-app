@@ -89,7 +89,7 @@
       </div>
     </div>
 
-    <!-- 可爱的新建按钮 -->
+    <!-- 底部按钮区 -->
     <div class="fab-container">
       <van-button
         type="primary"
@@ -101,6 +101,9 @@
         <span class="fab-icon">✨</span>
         新建听写任务
       </van-button>
+      <div class="settings-link" @click="$router.push('/settings')">
+        <van-icon name="setting-o" /> 设置
+      </div>
     </div>
   </div>
 </template>
@@ -450,5 +453,21 @@ async function handleDelete(task) {
 
 .bounce-animation {
   animation: bounce 2s ease-in-out infinite;
+}
+
+/* ===== 设置链接 ===== */
+.settings-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #999;
+  cursor: pointer;
+}
+
+.settings-link:active {
+  color: var(--theme-primary);
 }
 </style>
