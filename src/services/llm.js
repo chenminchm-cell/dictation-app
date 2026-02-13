@@ -10,7 +10,7 @@ const STORAGE_KEY = 'dictation_llm_config'
 const defaultConfig = {
   apiKey: '',
   baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-  model: 'doubao-1.5-vision-pro-32k',  // 豆包视觉模型
+  model: '',  // 豆包接入点ID，如 ep-xxxxxxxxxx-xxxxx
 }
 
 export const llmConfig = ref(loadConfig())
@@ -29,7 +29,7 @@ export function saveConfig(config) {
 }
 
 export function isConfigured() {
-  return !!llmConfig.value.apiKey
+  return !!llmConfig.value.apiKey && !!llmConfig.value.model
 }
 
 /**

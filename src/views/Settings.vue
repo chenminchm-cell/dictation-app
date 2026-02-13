@@ -29,20 +29,20 @@
         />
         <van-field
           v-model="config.model"
-          label="模型名称"
-          placeholder="doubao-1.5-vision-pro-32k"
+          label="接入点ID"
+          placeholder="ep-xxxxxxxxxx-xxxxx"
         />
       </van-cell-group>
 
       <div class="config-tips">
-        <p class="tip-title">如何获取 API Key？</p>
+        <p class="tip-title">配置步骤（豆包为例）</p>
         <ol class="tip-list">
-          <li>访问 <a href="https://console.volcengine.com/ark" target="_blank">火山引擎-豆包大模型</a> 注册账号</li>
+          <li>访问 <a href="https://console.volcengine.com/ark" target="_blank">火山引擎-豆包大模型</a> 注册登录</li>
           <li>在「API Key 管理」中创建 API Key</li>
-          <li>在「模型推理」中开通视觉模型 (免费额度50万tokens)</li>
-          <li>将 API Key 填入上方即可</li>
+          <li>在「模型推理」→「推理接入点」中<b>创建接入点</b>，选择 doubao-1.5-vision-pro 等视觉模型</li>
+          <li>将 API Key 和接入点 ID（<b>ep-</b> 开头）分别填入上方</li>
         </ol>
-        <p class="tip-note">💡 未配置 API Key 时将使用本地 Tesseract.js 引擎（精度较低）</p>
+        <p class="tip-note">💡 新用户有50万tokens免费额度。未配置时使用本地引擎（精度较低）</p>
       </div>
 
       <!-- 默认听写参数 -->
@@ -124,7 +124,7 @@ const DEFAULTS_KEY = 'dictation_defaults'
 const config = ref({
   apiKey: '',
   baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
-  model: 'doubao-1.5-vision-pro-32k'
+  model: ''
 })
 
 // 默认听写参数
@@ -136,7 +136,7 @@ const testing = ref(false)
 const testResult = ref(null)
 
 const engineLabel = computed(() => {
-  return config.value.apiKey ? '大模型 (AI)' : '本地引擎 (Tesseract)'
+  return (config.value.apiKey && config.value.model) ? '大模型 (AI)' : '本地引擎 (Tesseract)'
 })
 
 onMounted(() => {
