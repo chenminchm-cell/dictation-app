@@ -49,7 +49,12 @@
             }"
           >
             <div class="manual-index">{{ idx + 1 }}</div>
-            <div class="manual-word">{{ item.original }}</div>
+            <div class="manual-word-area">
+              <div class="manual-word">{{ item.original }}</div>
+              <div v-if="item.result === 'wrong' && item.written" class="manual-written">
+                孩子写的：<span class="written-text">{{ item.written }}</span>
+              </div>
+            </div>
             <div class="manual-buttons">
               <button
                 class="mark-btn mark-correct"
@@ -201,6 +206,25 @@
       </div>
     </van-dialog>
 
+    <!-- 对照批改：输入孩子写错的内容 -->
+    <van-dialog
+      v-model:show="showWrongInput"
+      title="孩子写的是什么？"
+      show-cancel-button
+      @confirm="confirmWrongInput"
+      @cancel="cancelWrongInput"
+    >
+      <div class="edit-dialog-content">
+        <p class="edit-original">正确词语：<strong>{{ wrongInputOriginal }}</strong></p>
+        <van-field
+          v-model="wrongInputText"
+          placeholder="输入孩子实际写的内容（可留空表示未作答）"
+          autofocus
+        />
+        <p class="edit-hint">留空表示没写或看不清</p>
+      </div>
+    </van-dialog>
+
     <!-- 拍照方式选择 -->
     <van-action-sheet
       v-model:show="showCameraSheet"
@@ -231,6 +255,12 @@ const step = ref('choose')  // choose → manual / capture → confirm
 // ===== 对照批改 =====
 const manualItems = ref([])
 
+// 标记错误时输入孩子实际写的内容
+const showWrongInput = ref(false)
+const wrongInputIdx = ref(-1)
+const wrongInputOriginal = ref('')
+const wrongInputText = ref('')
+
 const correctCount = computed(() => manualItems.value.filter(i => i.result === 'correct').length)
 const wrongCount = computed(() => manualItems.value.filter(i => i.result === 'wrong').length)
 const pendingCount = computed(() => manualItems.value.filter(i => i.result === 'pending').length)
@@ -238,36 +268,72 @@ const pendingCount = computed(() => manualItems.value.filter(i => i.result === '
 function startManualGrading() {
   manualItems.value = (task.value?.words || []).map(w => ({
     original: w,
+    written: '',       // 孩子实际写的内容
     result: 'pending'  // pending / correct / wrong
   }))
   step.value = 'manual'
 }
 
 function markResult(idx, result) {
-  // 如果点击已选中的，取消选择
-  if (manualItems.value[idx].result === result) {
-    manualItems.value[idx].result = 'pending'
-  } else {
-    manualItems.value[idx].result = result
+  if (result === 'correct') {
+    // 标记正确：如果已经是正确就取消
+    if (manualItems.value[idx].result === 'correct') {
+      manualItems.value[idx].result = 'pending'
+      manualItems.value[idx].written = ''
+    } else {
+      manualItems.value[idx].result = 'correct'
+      manualItems.value[idx].written = manualItems.value[idx].original
+    }
+  } else if (result === 'wrong') {
+    // 标记错误：如果已经是错误就取消
+    if (manualItems.value[idx].result === 'wrong') {
+      manualItems.value[idx].result = 'pending'
+      manualItems.value[idx].written = ''
+    } else {
+      // 弹窗让用户输入孩子实际写的
+      wrongInputIdx.value = idx
+      wrongInputOriginal.value = manualItems.value[idx].original
+      wrongInputText.value = manualItems.value[idx].written || ''
+      showWrongInput.value = true
+    }
   }
 }
 
+function confirmWrongInput() {
+  const idx = wrongInputIdx.value
+  manualItems.value[idx].result = 'wrong'
+  manualItems.value[idx].written = wrongInputText.value.trim() || '（未作答）'
+}
+
+function cancelWrongInput() {
+  // 取消输入，不改变状态
+}
+
 function markAllCorrect() {
-  manualItems.value.forEach(i => i.result = 'correct')
+  manualItems.value.forEach(i => {
+    i.result = 'correct'
+    i.written = i.original
+  })
 }
 
 function markAllWrong() {
-  manualItems.value.forEach(i => i.result = 'wrong')
+  manualItems.value.forEach(i => {
+    i.result = 'wrong'
+    i.written = '（未作答）'
+  })
 }
 
 function resetMarks() {
-  manualItems.value.forEach(i => i.result = 'pending')
+  manualItems.value.forEach(i => {
+    i.result = 'pending'
+    i.written = ''
+  })
 }
 
 async function submitManualGrading() {
   const details = manualItems.value.map(i => ({
     original: i.original,
-    written: i.result === 'correct' ? i.original : '（错误）',
+    written: i.result === 'correct' ? i.original : (i.written || '（未作答）'),
     isCorrect: i.result === 'correct',
     similarity: i.result === 'correct' ? 100 : 0
   }))
@@ -599,11 +665,26 @@ onMounted(async () => {
   color: #c62828;
 }
 
-.manual-word {
+.manual-word-area {
   flex: 1;
+  min-width: 0;
+}
+
+.manual-word {
   font-size: 17px;
   color: #333;
   font-weight: 600;
+}
+
+.manual-written {
+  font-size: 12px;
+  color: #e57373;
+  margin-top: 2px;
+}
+
+.manual-written .written-text {
+  text-decoration: line-through;
+  font-weight: 500;
 }
 
 .manual-buttons {
@@ -877,5 +958,11 @@ onMounted(async () => {
 
 .edit-original strong {
   color: var(--theme-primary);
+}
+
+.edit-hint {
+  font-size: 12px;
+  color: #bbb;
+  margin: 8px 0 0;
 }
 </style>

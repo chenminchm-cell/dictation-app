@@ -65,8 +65,9 @@
           <div class="result-index">{{ idx + 1 }}</div>
           <div class="result-content">
             <div class="result-original">{{ item.original }}</div>
-            <div v-if="!item.isCorrect" class="result-written">
-              写的：{{ item.written }}
+            <div v-if="!item.isCorrect" class="result-compare">
+              <span class="compare-label">孩子写的：</span>
+              <span class="compare-diff" v-html="charDiff(item.original, item.written)"></span>
             </div>
           </div>
           <div class="result-status">
@@ -81,9 +82,14 @@
         <div class="wrong-title">❌ 错误的词（{{ wrongWords.length }} 个）</div>
         <div class="wrong-words">
           <div v-for="item in wrongWords" :key="item.original" class="wrong-item">
-            <span class="wrong-correct">{{ item.original }}</span>
-            <span class="wrong-arrow">←</span>
-            <span class="wrong-written">{{ item.written }}</span>
+            <div class="wrong-item-top">
+              <span class="wrong-label">正确：</span>
+              <span class="wrong-correct">{{ item.original }}</span>
+            </div>
+            <div class="wrong-item-bottom">
+              <span class="wrong-label">写的：</span>
+              <span class="wrong-diff" v-html="charDiff(item.original, item.written)"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -154,6 +160,53 @@ const wrongWords = computed(() => {
   if (!record.value) return []
   return record.value.details.filter(d => !d.isCorrect)
 })
+
+/**
+ * 逐字对比，高亮标记错误字符
+ * 返回 HTML 字符串：正确字符用绿色，错误/多余字符用红色+删除线
+ */
+function charDiff(original, written) {
+  if (!written || written === '（未作答）' || written === '（错误）') {
+    return '<span class="diff-missing">（未作答）</span>'
+  }
+
+  const orig = original.trim()
+  const writ = written.trim()
+
+  // 完全匹配
+  if (orig === writ) {
+    return `<span class="diff-ok">${escHtml(writ)}</span>`
+  }
+
+  // 逐字符比对（适用于中文词语，每个字独立对比）
+  const maxLen = Math.max(orig.length, writ.length)
+  let html = ''
+
+  for (let i = 0; i < maxLen; i++) {
+    const oc = i < orig.length ? orig[i] : null
+    const wc = i < writ.length ? writ[i] : null
+
+    if (wc === null) {
+      // 孩子少写了字
+      html += `<span class="diff-missing-char" title="漏写：${escHtml(oc)}">_</span>`
+    } else if (oc === null) {
+      // 孩子多写了字
+      html += `<span class="diff-extra">${escHtml(wc)}</span>`
+    } else if (oc === wc) {
+      // 这个字正确
+      html += `<span class="diff-ok">${escHtml(wc)}</span>`
+    } else {
+      // 这个字错误
+      html += `<span class="diff-wrong" title="应该是：${escHtml(oc)}">${escHtml(wc)}</span>`
+    }
+  }
+
+  return html
+}
+
+function escHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 onMounted(async () => {
   const id = Number(route.params.id)
@@ -384,10 +437,22 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.result-written {
-  font-size: 13px;
-  color: #e57373;
+.result-compare {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 4px;
+  font-size: 14px;
+}
+
+.compare-label {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.compare-diff {
+  font-weight: 600;
 }
 
 .result-status {
@@ -430,27 +495,40 @@ onMounted(async () => {
 }
 
 .wrong-item {
+  background: white;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.wrong-item-top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  background: white;
-  padding: 10px 14px;
-  border-radius: 12px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.wrong-item-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wrong-label {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
+  min-width: 36px;
 }
 
 .wrong-correct {
   color: var(--theme-success);
   font-weight: 700;
+  font-size: 16px;
 }
 
-.wrong-arrow {
-  color: #ddd;
-}
-
-.wrong-written {
-  color: #e57373;
-  text-decoration: line-through;
+.wrong-diff {
+  font-weight: 600;
+  font-size: 16px;
 }
 
 /* ===== 底部按钮 ===== */
@@ -464,5 +542,43 @@ onMounted(async () => {
 .btn-retry {
   color: #666 !important;
   border-color: #eee !important;
+}
+
+/* ===== 逐字对比颜色 ===== */
+:deep(.diff-ok) {
+  color: #43a047;
+}
+
+:deep(.diff-wrong) {
+  color: #e53935;
+  background: #ffebee;
+  border-radius: 3px;
+  padding: 0 2px;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-underline-offset: 3px;
+}
+
+:deep(.diff-missing-char) {
+  color: #ff9800;
+  font-weight: 700;
+  background: #fff3e0;
+  border-radius: 3px;
+  padding: 0 4px;
+  border-bottom: 2px dashed #ff9800;
+}
+
+:deep(.diff-extra) {
+  color: #9e9e9e;
+  text-decoration: line-through;
+  background: #f5f5f5;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+:deep(.diff-missing) {
+  color: #bbb;
+  font-style: italic;
+  font-weight: 400;
 }
 </style>

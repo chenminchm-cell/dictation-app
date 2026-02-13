@@ -1,6 +1,15 @@
 /**
  * 批改服务 - 将手写识别结果与原始词语对比
+ * 中文：必须完全一致才算正确（一个字错就是错）
+ * 英文：忽略大小写，允许轻微拼写错误
  */
+
+/**
+ * 判断文本是否主要为中文
+ */
+function isChinese(text) {
+  return /[\u4e00-\u9fa5]/.test(text)
+}
 
 /**
  * 计算两个字符串的编辑距离（Levenshtein distance）
@@ -40,6 +49,35 @@ function similarity(a, b) {
 }
 
 /**
+ * 判断两个词语是否匹配
+ * 中文：必须完全一致
+ * 英文：忽略大小写比较，相似度 >= 0.85 即算对
+ */
+function isMatch(original, written) {
+  if (!written || !written.trim()) return false
+  
+  const origTrim = original.trim()
+  const writTrim = written.trim()
+  
+  // 完全一致
+  if (origTrim === writTrim) return true
+  
+  if (isChinese(origTrim)) {
+    // 中文：必须完全一致（每个字都不能错）
+    return false
+  } else {
+    // 英文：忽略大小写，允许轻微拼写错误
+    const origLower = origTrim.toLowerCase()
+    const writLower = writTrim.toLowerCase()
+    if (origLower === writLower) return true
+    
+    // 长单词允许1个字母的偏差（拼写容错）
+    const sim = similarity(origLower, writLower)
+    return sim >= 0.85
+  }
+}
+
+/**
  * 智能匹配 - 将识别的词语尽量匹配到原始词语
  * 使用贪心策略：对于每个原始词，在识别结果中找最佳匹配
  */
@@ -47,7 +85,7 @@ function smartMatch(originals, recognized) {
   if (recognized.length === 0) {
     return originals.map(orig => ({
       original: orig,
-      written: '',
+      written: '（未作答）',
       isCorrect: false,
       similarity: 0
     }))
@@ -57,14 +95,15 @@ function smartMatch(originals, recognized) {
   if (Math.abs(originals.length - recognized.length) <= 2) {
     return originals.map((orig, i) => {
       const written = i < recognized.length ? recognized[i] : ''
+      const correct = isMatch(orig, written)
       const sim = similarity(
         orig.toLowerCase().trim(),
-        written.toLowerCase().trim()
+        (written || '').toLowerCase().trim()
       )
       return {
         original: orig,
         written: written || '（未作答）',
-        isCorrect: sim >= 0.75,
+        isCorrect: correct,
         similarity: Math.round(sim * 100)
       }
     })
@@ -90,10 +129,11 @@ function smartMatch(originals, recognized) {
 
     if (bestIdx >= 0 && bestSim > 0.3) {
       used.add(bestIdx)
+      const written = recognized[bestIdx]
       return {
         original: orig,
-        written: recognized[bestIdx],
-        isCorrect: bestSim >= 0.75,
+        written,
+        isCorrect: isMatch(orig, written),
         similarity: Math.round(bestSim * 100)
       }
     }
