@@ -29,8 +29,8 @@
         />
         <van-field
           v-model="config.model"
-          label="接入点ID"
-          placeholder="ep-xxxxxxxxxx-xxxxx"
+          label="模型ID"
+          placeholder="如 doubao-seed-1-6-vision-250815"
         />
       </van-cell-group>
 
@@ -39,8 +39,8 @@
         <ol class="tip-list">
           <li>访问 <a href="https://console.volcengine.com/ark" target="_blank">火山引擎-豆包大模型</a> 注册登录</li>
           <li>在「API Key 管理」中创建 API Key</li>
-          <li>在「模型推理」→「推理接入点」中<b>创建接入点</b>，选择 doubao-1.5-vision-pro 等视觉模型</li>
-          <li>将 API Key 和接入点 ID（<b>ep-</b> 开头）分别填入上方</li>
+          <li>在「模型推理」→「推理接入点」中<b>创建接入点</b>，选择视觉模型（推荐 Doubao-Seed-1.6-vision）</li>
+          <li>点「API接入」标签查看模型ID（如 <b>doubao-seed-1-6-vision-250815</b>），填入上方</li>
         </ol>
         <p class="tip-note">💡 新用户有50万tokens免费额度。未配置时使用本地引擎（精度较低）</p>
       </div>
@@ -181,29 +181,67 @@ async function testConnection() {
   testing.value = true
   testResult.value = null
 
-  try {
-    const response = await fetch(`${config.value.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.value.apiKey}`
-      },
-      body: JSON.stringify({
-        model: config.value.model,
-        messages: [
-          { role: 'user', content: '你好，请回复"连接成功"' }
-        ],
-        max_tokens: 20
-      })
-    })
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${config.value.apiKey}`
+  }
 
-    if (response.ok) {
-      const data = await response.json()
-      const reply = data.choices?.[0]?.message?.content || ''
+  try {
+    // 先尝试 chat/completions
+    let reply = ''
+    let ok = false
+
+    try {
+      const resp1 = await fetch(`${config.value.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: config.value.model,
+          messages: [{ role: 'user', content: '你好，请回复"连接成功"' }],
+          max_tokens: 20
+        })
+      })
+      if (resp1.ok) {
+        const data = await resp1.json()
+        reply = data.choices?.[0]?.message?.content || ''
+        ok = true
+      }
+    } catch {}
+
+    // 如果失败，尝试 responses API
+    if (!ok) {
+      const resp2 = await fetch(`${config.value.baseUrl}/responses`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: config.value.model,
+          input: [{ role: 'user', content: [{ type: 'input_text', text: '你好，请回复"连接成功"' }] }]
+        })
+      })
+      if (resp2.ok) {
+        const data = await resp2.json()
+        // 解析 responses 格式
+        const output = data.output
+        if (Array.isArray(output)) {
+          for (const item of output) {
+            if (item.type === 'message' && Array.isArray(item.content)) {
+              for (const c of item.content) {
+                if (c.type === 'output_text' && c.text) reply = c.text
+              }
+            }
+          }
+        }
+        reply = reply || data.choices?.[0]?.message?.content || ''
+        ok = true
+      } else {
+        const err = await resp2.text()
+        testResult.value = { ok: false, message: `❌ 连接失败 (${resp2.status}): ${err.slice(0, 150)}` }
+        return
+      }
+    }
+
+    if (ok) {
       testResult.value = { ok: true, message: `✅ 连接成功！模型回复：${reply}` }
-    } else {
-      const err = await response.text()
-      testResult.value = { ok: false, message: `❌ 连接失败 (${response.status}): ${err.slice(0, 100)}` }
     }
   } catch (err) {
     testResult.value = { ok: false, message: `❌ 网络错误: ${err.message}` }
