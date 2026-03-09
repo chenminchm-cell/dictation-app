@@ -9,3 +9,10 @@ const app = createApp(App)
 app.use(router)
 app.use(Lazyload)
 app.mount('#app')
+
+// PWA 更新检测：有新版本时自动刷新
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload()
+  })
+}

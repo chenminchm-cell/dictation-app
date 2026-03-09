@@ -104,6 +104,7 @@
       <div class="settings-link" @click="$router.push('/settings')">
         <van-icon name="setting-o" /> 设置
       </div>
+      <div class="version-text">v{{ appVersion }}</div>
     </div>
   </div>
 </template>
@@ -113,6 +114,7 @@ import { ref, onActivated } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'
 import { getAllTasks, deleteTask, getLatestRecord } from '../db'
 
+const appVersion = __APP_VERSION__
 const tasks = ref([])
 
 // 使用 onActivated，每次从其他页面返回时都刷新列表
@@ -469,5 +471,12 @@ async function handleDelete(task) {
 
 .settings-link:active {
   color: var(--theme-primary);
+}
+
+.version-text {
+  text-align: center;
+  font-size: 11px;
+  color: #ccc;
+  margin-top: 8px;
 }
 </style>
