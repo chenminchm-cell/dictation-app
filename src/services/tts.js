@@ -40,8 +40,15 @@ export function loadVoices() {
         if (zhVoice) selectedVoiceZh.value = zhVoice.name
       }
       if (!selectedVoiceEn.value) {
-        const enVoice = voices.find(v => isEnLang(v.lang))
-        if (enVoice) selectedVoiceEn.value = enVoice.name
+        // 默认选美式英语（中考听力常用）
+        const usVoices = voices.filter(v => isAmericanEnglish(v.lang))
+        const bestUS = pickBestVoice(usVoices)
+        if (bestUS) {
+          selectedVoiceEn.value = bestUS.name
+        } else {
+          const enVoice = voices.find(v => isEnLang(v.lang))
+          if (enVoice) selectedVoiceEn.value = enVoice.name
+        }
       }
     }
   }
@@ -67,17 +74,45 @@ function isEnLang(lang) {
   return l.startsWith('en') || l.includes('-us') || l.includes('-gb') || l.includes('-au')
 }
 
+function isAmericanEnglish(lang) {
+  if (!lang) return false
+  const l = lang.toLowerCase().replace('_', '-')
+  return l === 'en-us' || l === 'en_us'
+}
+
+function isBritishEnglish(lang) {
+  if (!lang) return false
+  const l = lang.toLowerCase().replace('_', '-')
+  return l === 'en-gb' || l === 'en_gb'
+}
+
+/**
+ * 从候选语音中选出最佳的一个
+ * 优先级：Online/Premium > 普通 > local
+ * 中考英语听力风格：清晰、标准、语速适中
+ */
+function pickBestVoice(voices) {
+  if (voices.length === 0) return null
+  // 优先选 Online 语音（质量最高）
+  const online = voices.find(v => /online|premium|neural/i.test(v.name))
+  if (online) return online
+  // 其次选非 local 的（通常是系统自带的高质量语音）
+  const nonLocal = voices.find(v => !v.localService)
+  if (nonLocal) return nonLocal
+  // 兜底返回第一个
+  return voices[0]
+}
+
 /**
  * 获取中文语音列表（响应式）
  */
 export function getChineseVoices() {
-  // 访问 voicesLoaded 以建立响应式依赖
   void voicesLoaded.value
   return _allVoices.filter(v => isZhLang(v.lang))
 }
 
 /**
- * 获取英文语音列表（响应式）
+ * 获取英文语音列表 - 只返回精选的美式和英式各1个
  */
 export function getEnglishVoices() {
   void voicesLoaded.value
@@ -85,7 +120,33 @@ export function getEnglishVoices() {
 }
 
 /**
- * 获取所有语音（调试用）
+ * 获取精选英文语音（美式+英式各1个）
+ */
+export function getFilteredEnglishVoices() {
+  void voicesLoaded.value
+  const allEn = _allVoices.filter(v => isEnLang(v.lang))
+
+  const usVoices = allEn.filter(v => isAmericanEnglish(v.lang))
+  const gbVoices = allEn.filter(v => isBritishEnglish(v.lang))
+
+  const result = []
+  const bestUS = pickBestVoice(usVoices)
+  const bestGB = pickBestVoice(gbVoices)
+
+  if (bestUS) result.push({ ...bestUS, _label: '美式英语', _tag: 'US' })
+  if (bestGB) result.push({ ...bestGB, _label: '英式英语', _tag: 'GB' })
+
+  // 如果设备上没有标准的 en-US/en-GB，从所有英文中选一个兜底
+  if (result.length === 0 && allEn.length > 0) {
+    const fallback = pickBestVoice(allEn)
+    if (fallback) result.push({ ...fallback, _label: '英语', _tag: 'EN' })
+  }
+
+  return result
+}
+
+/**
+ * 获取所有语音
  */
 export function getAllVoices() {
   void voicesLoaded.value

@@ -238,8 +238,7 @@ import {
   speakWord,
   loadVoices,
   getChineseVoices,
-  getEnglishVoices,
-  getAllVoices,
+  getFilteredEnglishVoices,
   selectedVoiceZh,
   selectedVoiceEn,
   isPlaying,
@@ -306,14 +305,10 @@ const zhVoiceActions = computed(() => {
 })
 
 const enVoiceActions = computed(() => {
-  let voices = getEnglishVoices()
-  // 如果过滤后为空，显示所有语音供选择
-  if (voices.length === 0) {
-    voices = getAllVoices()
-  }
+  const voices = getFilteredEnglishVoices()
   return voices.map(v => ({
-    name: formatVoiceName(v),
-    subname: v.lang,
+    name: v._label,
+    subname: formatVoiceName(v),
     value: v.name,
     className: v.name === selectedVoiceEn.value ? 'voice-selected' : ''
   }))
@@ -327,10 +322,9 @@ const zhVoiceLabel = computed(() => {
 
 const enVoiceLabel = computed(() => {
   if (!selectedVoiceEn.value) return '默认'
-  const voices = getEnglishVoices()
-  const v = voices.find(v => v.name === selectedVoiceEn.value) ||
-            getAllVoices().find(v => v.name === selectedVoiceEn.value)
-  return v ? formatVoiceName(v) : '默认'
+  const voices = getFilteredEnglishVoices()
+  const v = voices.find(v => v.name === selectedVoiceEn.value)
+  return v ? v._label : '默认'
 })
 
 function onZhVoiceSelect(action) {
