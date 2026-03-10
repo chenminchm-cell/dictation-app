@@ -120,6 +120,21 @@ export function getEnglishVoices() {
 }
 
 /**
+ * 包装语音对象（SpeechSynthesisVoice 的属性不可枚举，不能直接展开）
+ */
+function wrapVoice(voice, label, tag) {
+  return {
+    name: voice.name,
+    lang: voice.lang,
+    localService: voice.localService,
+    voiceURI: voice.voiceURI,
+    _raw: voice,
+    _label: label,
+    _tag: tag
+  }
+}
+
+/**
  * 获取精选英文语音（美式+英式各1个）
  */
 export function getFilteredEnglishVoices() {
@@ -133,13 +148,13 @@ export function getFilteredEnglishVoices() {
   const bestUS = pickBestVoice(usVoices)
   const bestGB = pickBestVoice(gbVoices)
 
-  if (bestUS) result.push({ ...bestUS, _label: '美式英语', _tag: 'US' })
-  if (bestGB) result.push({ ...bestGB, _label: '英式英语', _tag: 'GB' })
+  if (bestUS) result.push(wrapVoice(bestUS, '美式英语', 'US'))
+  if (bestGB) result.push(wrapVoice(bestGB, '英式英语', 'GB'))
 
   // 如果设备上没有标准的 en-US/en-GB，从所有英文中选一个兜底
   if (result.length === 0 && allEn.length > 0) {
     const fallback = pickBestVoice(allEn)
-    if (fallback) result.push({ ...fallback, _label: '英语', _tag: 'EN' })
+    if (fallback) result.push(wrapVoice(fallback, '英语', 'EN'))
   }
 
   return result
